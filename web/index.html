@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Smart Housse-Login</title>
+    <link rel="icon" type="image/png" sizes="16x16" href="./Login_v2/images/smart-home.png">
+    <link rel="stylesheet" href="styleLogin.css">
+    <script>
+
+
+function verif(){
+        user=document.F.username
+        mdps=document.F.password
+        r1=document.getElementById("loginverif");
+          if(user.value=="" && mdps.value==""){
+                user.style.border="2px solid red";
+                mdps.style.border="2px solid red";
+                r1.innerText="*les champs en rouge sont obligatior!! s'il vous plaiez verifier vos donnez*";
+
+            }
+            else if(user.value==""){
+                mdps.style.border="2px solid gray";
+                user.style.border="2px solid red";
+                r1.innerText="*les champs en rouge sont obligatior!! s'il vous plaiez verifier vos donnez*";
+
+            }
+            else if(mdps.value==""){
+                user.style.border="2px solid gray";
+                mdps.style.border="2px solid red";
+                r1.innerText="*les champs en rouge sont obligatior!! s'il vous plaiez verifier vos donnez*";
+
+            }
+            else{
+               if(user.value=="mahfoudh" && mdps.value=="123456"){
+                 window.location.href="main.html";
+               }
+               else{
+                user.style.border="2px solid red";
+                mdps.style.border="2px solid red";
+                r1.innerText="*les champs en rouge sont obligatior!! s'il vous plaiez verifier vos donnez*";
+
+               }
+            }
+        }
+
+      
+  </script>
+</head>
+<body>
+  <header >
+    <a href="#" class="logo">Smart Home</a>
+    <nav class="navig">
+        <a href="index.html">Connexion</a>
+    </nav>
+</header>
+  <section class="main">
+    
+    <div class="login">
+        <h2 class="title">Smart Home</h2>
+        <div>
+           <form name="F" action="#" method="post">
+              <input type="text" placeholder="Login" class="saisir" name="username"><br><br>
+              <input type="password" placeholder="Mots_de_passe" class="saisir" name="password"><br>
+              <br>
+              <div class="erreur">
+                  <h5 id="loginverif">.</h5>
+              </div>
+              <br>
+              <a type="button" class="btn" onclick="verif();" >Connect</a><br>
+            </form>
+          </div>
+    </div>
+</section>
+</body>
+</html>

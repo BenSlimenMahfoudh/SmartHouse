@@ -1,0 +1,686 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Smart Housse</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" type="image/png" sizes="16x16" href="./Login_v2/images/smart-home.png">
+<script type = "text/javascript" src = "https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js" type="text/javascript"></script>
+<script type="text/javascript"
+        src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js">
+</script>
+<script type="text/javascript">
+   (function(){
+      emailjs.init("zShbr1cm4FtdSZAHM");
+   })();
+</script>
+
+<script >
+
+var mqtt;
+//var host="localhost";
+var port=1883
+//var host="@ip";
+var host = "sman.local";
+//var port=8000
+//var port=9001
+var reconnectTimeout = 1000;
+var pictures = {"0": null}
+/*var options = {
+//connection attempt timeout in seconds
+timeout: 3,
+//Gets Called if the connection has successfully been established
+onSuccess: onConnect,
+//Gets Called if the connection could not be established
+onFailure: function (message) {
+alert("Connection failed: " + message.errorMessage);
+}
+*/
+function MQTTconnect() {
+console.log("in connect");
+mqtt = new Paho.MQTT.Client(host,port,"clientjs");
+ 
+
+var options = {
+//connection attempt timeout in seconds
+timeout: 3,
+//Gets Called if the connection has successfully been established
+onSuccess: onConnect,
+//Gets Called if the connection could not be established
+onFailure: function (message) {
+alert("Connection failed: " + message.errorMessage);
+
+document.getElementById("connexion").style.backgroundColor="#c00202";
+ $("#infoconnect").html("Home is not connect ");
+},
+ userName: "user1",
+ password: "test"
+ };
+mqtt.onConnectionLost = onConnectionLost;
+mqtt.onMessageArrived = onMessageArrived;
+mqtt.onFailure=onFailure
+//console.log("Host="+ host + ", port=" + port + ", path=" + path + " TLS = " + useTLS + " username=" + username + " password=" + password);
+console.log("connecting")
+//mqtt.connect({onSuccess:onConnect});
+mqtt.connect(options)
+//mqtt.connect({onSuccess: onConnect});
+}
+function onFailure(message) {
+console.log("Failed");
+$('#status').val("Connection failed: " + message.errorMessage + "Retrying");
+setTimeout(MQTTconnect, reconnectTimeout);
+}
+function onConnect() {
+ // Once a connection has been made, make a subscription and send a message.
+ console.log("on Connect");
+ mqtt.subscribe("ctrl");
+ mqtt.subscribe("alert");
+ 
+
+ mqtt.subscribe("data");
+ mqtt.subscribe("temp");
+ message = new Paho.MQTT.Message("Hello");
+ message.destinationName = "ctrl";
+ mqtt.send(message);
+}
+function onConnectionLost(responseObject) {
+console.log("Connection Lost");
+setTimeout(MQTTconnect, reconnectTimeout);
+$('#status').val("connection lost: " + responseObject.errorMessage + ". Reconnecting");
+}
+function onMessageArrived(message) {
+var topic = message.destinationName;
+var payload = message.payloadString;
+
+//$("#display").html($('#display').html() + " <br>connecting to "+ message.payloadString);
+//$("#display").html($('#display').html() + "<br>got message "+message.payloadString);
+console.log("onMessageArrived:"+message.payloadString)
+if(topic == "data"){reconstructBase64String(message.payloadString);}
+if(topic == "ctrl")
+{
+if(payload == "Hello")
+{
+ document.getElementById("connexion").style.backgroundColor="green";
+ $("#infoconnect").html("Home is connect ");
+}
+}
+if(topic == "alert")
+{
+if(payload == "water")
+{
+$("#displayWater").html($('#displayWater').html() + "Water Leakage Detected at " + Date() +"<br>");
+}
+if(payload == "sound")
+{
+$("#displaySound").html($('#displaySound').html() + "Sound Detected at " + Date() + "<br>");
+ 
+
+}
+if(payload == "motion")
+{
+$("#displayMotion").html($('#displayMotion').html() + "Motion Detected at " + Date() + "<br>");
+}
+if(payload == "gas")
+{
+$("#displayGaz").html($('#displayGaz').html() + "Gaz Detected at " + Date() + "<br>");
+}
+if(payload == "lightOn")
+{
+$("#displayLight").html("Light is On");
+document.getElementById("displayLight").style.backgroundColor='green';
+}
+if(payload == "lightOff")
+{
+$("#displayLight").html("Light is Off");
+document.getElementById("displayLight").style.backgroundColor='#c00202';
+
+}
+if(payload == "powerOut")
+{
+$("#display").html($('#display').html() + "<br>Device power lost: switching to battery power at " + Date() + "<br>");
+}
+if(payload == "powerOn")
+{
+$("#display").html($('#display').html() + "<br>Device power restored: switching to outlet power at " + Date() + "<br>");
+}
+if(payload == "doorOpen"){
+
+    $("#displayDoor").html("Door is open"+"<br>");
+    document.getElementById("displayDoor").style.backgroundColor='green';
+}
+if( payload == "doorClose"){
+    $("#displayDoor").html("Door is closed");
+    document.getElementById("displayDoor").style.backgroundColor='#c00202';
+
+}
+if( payload == "windowOpen"){
+
+    $("#displayLight").html("Window is open");
+    document.getElementById("displayWindow").style.backgroundColor='green';
+}
+if (payload == "windowClose"){
+    $("#displayWindow").html("Window is closed");
+    document.getElementById("displayWidow").style.backgroundColor='#c00202';
+
+}
+if(payload =="password"){
+    document.getElementById("password").style.border="2px solid red";
+    alert("Your password is false !!")
+    sendEmail();
+}
+
+}
+if (topic == "user") {
+    $("#displayDoor").html($('#displayDoor').html()+"Welcom "+ message);
+}
+if(topic == "temp")
+{
+info = JSON.parse(message.payloadString);
+temperature = info["temp"];
+humidity = info["hum"];
+$("#displayTemp").html("<br>Temperature "+temperature+" degrees, humidity "+humidity+"% at " + Date() +".");
+}
+}
+$(document).ready(function(){console.log("connecting to"+ host);
+ //$("#display").html("\nconnecting to"+ host);
+ $("#display").html($('#display').html() + "<br>connecting to "+ host);
+ MQTTconnect();});
+ 
+
+function lightOn() {
+alert('light is on');
+ message = new Paho.MQTT.Message("lightOn");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function lightOff() {
+alert('light is off');
+ message = new Paho.MQTT.Message("lightOff");
+ $("#light").attr('src',"./Login_v2/images/porte.png");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function gettemp() {
+alert('Getting Environment Info');
+ message = new Paho.MQTT.Message("temperature");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function takephoto() {
+alert('Taking a Picture');
+ message = new Paho.MQTT.Message("pic");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+
+ function motionOn() {
+alert('Turning on Motion Sensor');
+ message = new Paho.MQTT.Message("motionOn");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function motionOff() {
+alert('Turning off Motion Sensor');
+ message = new Paho.MQTT.Message("motionOff");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function picture() {
+alert('Taking a picture');
+ message = new Paho.MQTT.Message("picture");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+ function video() {
+alert('Taking a video');
+
+ 
+
+
+ message = new Paho.MQTT.Message("video");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function waterON() {
+alert('Water detection ON');
+ message = new Paho.MQTT.Message("waterON");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function waterOFF() {
+alert('Water detection OFF');
+ message = new Paho.MQTT.Message("waterOFF");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function gasON() {
+alert('Gas detection OFF');
+ message = new Paho.MQTT.Message("gasON");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+ function gasOFF() {
+alert('Gas detection OFF');
+ message = new Paho.MQTT.Message("gasOFF");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function OpenDoor(){
+    alert('the door is opening !! pleas stand front the camera and put your password');
+    document.getElementById("passW").style.display="ruby";
+ message = new Paho.MQTT.Message("doorOpen");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function send(){
+    alert("Your password cheking !! Pleas wait.")
+    message = new Paho.MQTT.Message("password"+document.getElementById("password").value);
+    document.getElementById("password").value="";
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+
+function CloseDoor(){
+    alert('the door will be closed !!');
+    document.getElementById("passW").style.display="none";
+ message = new Paho.MQTT.Message("doorClose");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+
+function OpenWindow(){
+    alert('the window is opening !!');
+ message = new Paho.MQTT.Message("windowOpen");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+
+function CloseWindow(){
+    alert('the window will be closed !!');
+ message = new Paho.MQTT.Message("windowClose");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+
+ function PIC() {
+alert('Picture will be taken if motion is detected');
+ message = new Paho.MQTT.Message("motionPIC");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+ function VID() {
+alert('Video will be recorded if motion is detected');
+ message = new Paho.MQTT.Message("motionVID");
+ message.destinationName = "ctrl";
+mqtt.send(message);
+}
+function reconstructBase64String(chunk) {
+pChunk = JSON.parse(chunk);//["d"]);
+//creates a new picture object if receiving a new picture, else adds incoming strings to an existing picture
+if (pictures["0"]==null) {
+pictures["0"] = {"count":0, "total":pChunk["size"], pieces: {}, "pic_id": pChunk["pic_id"], "format":pChunk["format"]};
+pictures["0"].pieces[pChunk["pos"]] = pChunk["data"];
+}
+else {
+pictures["0"].pieces[pChunk["pos"]] = pChunk["data"];
+pictures["0"].count += 1;
+if (pictures["0"].count == pictures["0"].total) {
+console.log("File reception compelete");
+var str_image="";
+
+ 
+
+
+for (var i = 0; i <= pictures["0"].total; i++)
+str_image = str_image + pictures["0"].pieces[i];
+//displays image
+if(pictures["0"].format == "jpg"){
+var source = 'data:image/jpeg;base64,'+str_image;
+var myImageElement = document.getElementById("picture_to_show");}
+else if(pictures["0"].format == "mp4"){
+var source = 'data:video/mp4;base64,'+str_image;
+var myImageElement = document.getElementById("vidTest");}
+myImageElement.src = source;
+pictures["0"] = null;
+}
+}
+}
+function light(){document.getElementById("connexion").style.backgroundColor="green";
+$("#infoconnect").html("Home is connect ");}
+</script>
+</head>
+<body>
+    <header>
+        <a href="#" class="logo">Smart Home</a>
+        <nav class="navig">
+            <a href="#services">Services</a>
+            <a href="#contact">Contact us</a>
+        </nav>
+    </header>
+
+    <section class="main">
+        <div class="main2">
+            <h2>Starting again</h2><br><br><br>
+            <a href="#services" class="mainbtn" >View Services</a>
+        </div>
+        <div id="connexion">
+            <img src="./Login_v2/images/smart-home.png" alt="" 
+            style="width: 250px; height: 250px;">
+            <h3 id="infoconnect">Home is not connect</h3>
+        </div>
+    </section>
+
+    <section class="cards" id="services">
+        <h2 class="title">Services</h2>
+        <div class="content">
+           <a class="card" href="#light">
+               <div class="icon">
+                   <img src="./Login_v2/images/light.png" alt="#">
+               </div>
+               <div class="info">
+                   <h3>Turn light</h3>
+                   <p>
+                       activate and deactivate light of the house.
+                   </p>
+               </div>
+            </a>
+        <a class="card" href="#temp">
+            <div class="icon">
+                <img src="./Login_v2/images/temp&humid.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Get temperature and humidity </h3>
+                <p>
+                    Read temperature and humidity of the house.
+                </p>
+            </div>
+        </a>
+        <a class="card" href="#port">
+            <div class="icon">
+                <img src="./Login_v2/images/porte.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>DOOR</h3>
+                <p>
+                 Clos and open the door.
+                </p>
+            </div>
+        </a> 
+        <a class="card" href="#montion">
+            <div class="icon">
+                <img src="./Login_v2/images/motion1.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Turn motion detector</h3>
+                <p>
+                 Detect motion in the house
+                </p>
+            </div>
+        </a>
+        <a class="card" href="#window">
+            <div class="icon">
+                <img src="./Login_v2/images/les-fenetres.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>WINDOW</h3>
+                <p>
+                    Clos and open the door.
+                </p>
+            </div>
+        </a> 
+
+        <a class="card" href="#cam">
+            <div class="icon">
+                <img src="./Login_v2/images/camera.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Take a picture</h3>
+                <p>
+                Take a picture with or without motion detection
+                </p>
+            </div>
+        </a>
+
+        <a class="card" href="#vid">
+            <div class="icon">
+                <img src="./Login_v2/images/lecteur-video.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Record a video</h3>
+                <p>
+                  Record a video with or without motion detection.
+                </p>
+            </div>
+        </a>
+
+        <a class="card" href="#water">
+            <div class="icon">
+                <img src="./Login_v2/images/water1.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Turn water leakage detection</h3>
+                <p>
+                 Detect water leakage. 
+                </p>
+            </div>
+        </a>
+        <a class="card" href="#gas">
+            <div class="icon">
+                <img src="./Login_v2/images/gaz.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Turn Gas detection</h3>
+                <p>
+                 Detect gas in the house.
+                </p>
+            </div>
+        </a>
+        </div>
+    </section>
+
+
+    <section class="servc" id="light">
+        <h2 class="title">Turn light</h2>
+            <div class="infoservc1" >
+               <img src="./Login_v2/images/light.png" alt="#" id="light">
+               <br><br><br>
+               <a onclick=lightOn() class="btnon" >ON</a>
+               <a onclick=lightOff() class="btnoff" >OFF</a>
+               <br>
+               <h3 class="display" id="displayLight">Light is OFF</h3>
+            </div>
+
+    </section>
+
+    <section class="servc" id="temp">
+        <h2 class="title">Get temperature and humidity</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/temp&humid.png" alt="#">
+               <br><br><br>
+               <a onclick=gettemp() class="btnon" 
+               style="margin-left: 25px;">   GET   </a>
+            </div>
+        <div class="infocapt">
+            <h3 id="displayTemp"></h3>
+        </div>
+    </div>
+    </section>
+
+    <section class="servc" id="port">
+        <h2 class="title">DOOR</h2>
+            <div class="infoservc1" >
+               <img src="./Login_v2/images/porte.png" alt="#">
+               <br><br><br>
+               <a onclick=OpenDoor() class="btnon" >Open</a>
+               <a onclick=CloseDoor() class="btnoff" >Close</a>
+               <br>
+               <div class="password" id="passW">
+                    <input type="password" class="psw" placeholder="Put your password" id="password">
+                    <a onclick=send() class="btnPass" >Send</a>
+               </div>
+               
+               <h3 class="display" id="displayLight">Door is closed</h3>
+            </div>
+    
+    </section>
+
+    <section class="servc" id="gas">
+        <h2 class="title">Turn Gaz detection</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/gaz.png" alt="#">
+               <br><br><br>
+               <a onclick=gasON() class="btnon" >ON</a>
+               <a onclick=gasOFF() class="btnoff" >OFF</a>
+            </div>
+        <div class="infocapt">
+            <h3 id="displayGaz"></h3>
+        </div>
+    </div>
+    </section>
+
+    <section class="servc" id="water">
+        <h2 class="title">Turn water leakage detection</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/water1.png" alt="#">
+               <br><br><br>
+               <a onclick=waterON() class="btnon" >ON</a>
+               <a onclick=waterOFF() class="btnoff" >OFF</a>
+            </div>
+        <div class="infocapt">
+            <h3 id="displayWater"></h3>
+        </div>
+    </div>
+    </section>
+
+    <section class="servc" id="montion">
+        <h2 class="title">Turn motion detector</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/motion1.png" alt="#">
+               <br><br><br>
+               <a onclick=motionOn() class="btnon" >ON</a>
+               <a onclick=motionOff() class="btnoff" >OFF</a>
+            </div>
+            <div class="infocapt">
+                <h3 id="displayMotion"></h3>
+            </div>
+     </div>
+     </section>
+        <section class="servc" id="window">
+                <h2 class="title">WINDOW</h2>
+                    <div class="infoservc1" >
+                       <img src="./Login_v2/images/les-fenetres.png" alt="#">
+               <br><br><br>
+               <a onclick=OpenWindow() class="btnon" >Open</a>
+               <a onclick=CloseWindow() class="btnoff" >Close</a>
+               <br>
+               <h3 class="display" id="displayLight">Window is closed</h3>
+            </div>
+
+    </section>
+
+    <section class="servc" id="cam">
+        <h2 class="title">Take a picture</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/camera.png" alt="#">
+               <br><br><br>
+               <a onclick=picture() class="btnon" 
+               style="margin-left: 25px;" >GET PIC</a>
+            </div>
+        <div class="infocapt">
+            <h3><img class="cameraa" id = "picture_to_show"/></h3>
+        </div>
+    </div>
+    </section>
+
+    <section class="servc" id="vid">
+        <h2 class="title">Record a video</h2>
+        <div class="content">
+            <div class="infoservc" >
+               <img src="./Login_v2/images/lecteur-video.png" alt="#">
+               <br><br><br>
+               <a onclick=video() class="btnon" 
+               style="margin-left: 25px;" >GET VIDEO</a>
+            </div>
+        <div class="infocapt">
+            <h3><video width="560" id="vidTest" align = "middle" controls class="cameraa"></video></h3>
+        </div>
+    </div>
+    </section>
+
+    <section class="contact" id="contact">
+        <h2 class="title">Contact us</h2>
+        <div class="content">
+        <div class="card">
+            <div class="icon">
+                <img src="./Login_v2/images/phone-call.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Call me</h3>
+                <p>
+                    +216 26 897 381
+                </p>
+            </div>
+        </div>
+        <div class="card" onclick="mail();">
+            <div class="icon">
+                <img src="./Login_v2/images/gmail.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Gmail</h3>
+                <p>
+                    mahfoudhbenslime88@gmail.com
+                </p>
+            </div>
+        </div>
+        <div class="card" >
+            <div class="icon">
+                <img src="./Login_v2/images/facebook.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>facebook</h3>
+                <p>
+                    Mah'foudh Ben Slimen
+                </p>
+            </div>
+        </div>
+    
+        <div class="card" onclick="mail();">
+            <div class="icon">
+                <img src="./Login_v2/images/github-sign.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>Github</h3>
+                <p>
+                    MahfoudhBenslimen
+                </p>
+            </div>
+        </div>
+    
+        <div class="card" onclick="mail();">
+            <div class="icon">
+                <img src="./Login_v2/images/linkedin.png" alt="#">
+            </div>
+            <div class="info">
+                <h3>LinkedIn</h3>
+                <p>
+                    mahfoudhbenslime88@gmail.com
+                </p>
+            </div>
+        </div>
+        
+    </div>
+    </section>
+    
+    <footer>
+        <p style=" padding-top: 50px; padding-left: 30px;">
+            &copy; Smart <span class="copy">House</span>
+        </p>
+    </footer>
+
+
+</body>
+</html>
